@@ -23,5 +23,5 @@ $ vim .env
 ## Run Test
 
 ```bash
-$ godotenv -f .env go test
+$ godotenv -f .env go test -v
 ```

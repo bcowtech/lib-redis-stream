@@ -67,7 +67,7 @@ func (c *Consumer) Subscribe(streams ...StreamKeyOffset) error {
 	}
 
 	var (
-		worker = &ConsumeContext{
+		ctx = &ConsumeContext{
 			consumer:                c,
 			unhandledMessageHandler: c.UnhandledMessageHandler,
 		}
@@ -100,7 +100,7 @@ func (c *Consumer) Subscribe(streams ...StreamKeyOffset) error {
 					if len(streams) > 0 {
 						for _, stream := range streams {
 							for _, message := range stream.Messages {
-								c.MessageHandler(worker, stream.Stream, &message)
+								c.MessageHandler(ctx, stream.Stream, &message)
 							}
 						}
 						continue
@@ -121,7 +121,7 @@ func (c *Consumer) Subscribe(streams ...StreamKeyOffset) error {
 					if len(streams) > 0 {
 						for _, stream := range streams {
 							for _, message := range stream.Messages {
-								c.MessageHandler(worker, stream.Stream, &message)
+								c.MessageHandler(ctx, stream.Stream, &message)
 							}
 						}
 						continue

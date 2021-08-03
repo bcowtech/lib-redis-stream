@@ -2,7 +2,7 @@ package redis
 
 var _ MessageHandleProc = StopRecursiveForwardUnhandledMessageHandler
 
-func StopRecursiveForwardUnhandledMessageHandler(worker *ConsumeContext, stream string, message *XMessage) {
+func StopRecursiveForwardUnhandledMessageHandler(ctx *ConsumeContext, stream string, message *XMessage) {
 	logger.Fatal("invalid forward; it might be recursive forward message to unhandledMessageHandler")
 }
 
