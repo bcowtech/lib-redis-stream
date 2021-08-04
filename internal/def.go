@@ -8,6 +8,8 @@ const (
 	AutoIncrement    string = "*"
 	NextStreamOffset string = ">"
 	LastStreamOffset string = "$"
+
+	MAX_PENDING_SEED_SIZE int64 = 64
 )
 
 type (

@@ -91,49 +91,35 @@ func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStrea
 
 	var resultStream []redis.XStream = make([]redis.XStream, 0, len(c.streamKeys))
 	for _, stream := range c.streamKeys {
-		var resultMessages []redis.XMessage = make([]redis.XMessage, 0, count)
-
-		var lastPendingID string = "-"
-		// the block will fetching all pending messages till it is empty
-		for {
-			size := int(count) - len(resultMessages)
-			if size <= 0 {
-				break
+		// fetch all pending messages from specified redis stream key
+		pendingSet, err := c.handle.XPendingExt(&redis.XPendingExtArgs{
+			Stream: stream,
+			Group:  c.Group,
+			Start:  "-",
+			End:    "+",
+			Count:  c.getPendingSeedSize(count),
+		}).Result()
+		if err != nil {
+			if err != redis.Nil {
+				return nil, err
 			}
+		}
 
-			// fetch all pending messages from specified redis stream key
-			pendingSet, err := c.handle.XPendingExt(&redis.XPendingExtArgs{
-				Stream: stream,
-				Group:  c.Group,
-				Start:  lastPendingID,
-				End:    "+",
-				Count:  count * 2,
-			}).Result()
-			if err != nil {
-				if err != redis.Nil {
-					return nil, err
-				}
-			}
-
-			if len(pendingSet) == 0 {
-				break
-			}
-
+		if len(pendingSet) > 0 {
 			var (
-				selectedPending   []redis.XPendingExt = make([]redis.XPendingExt, 0, size)
-				selectedMessageID []string            = make([]string, 0, size)
+				selectedPending   []redis.XPendingExt = make([]redis.XPendingExt, 0, count)
+				selectedMessageID []string            = make([]string, 0, count)
 			)
+
 			// filter the message ids that only the idle time over
 			// the Worker.AutoClaimMinIdleTime
 			for _, pending := range pendingSet {
 				// update the last pending id
-				lastPendingID = pending.ID
-
 				if pending.Idle > minIdleTime {
 					selectedPending = append(selectedPending, pending)
 					selectedMessageID = append(selectedMessageID, pending.ID)
 
-					if len(selectedPending) == int(size) {
+					if len(selectedPending) == int(count) {
 						break
 					}
 				}
@@ -152,14 +138,13 @@ func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStrea
 						return nil, err
 					}
 				}
-				resultMessages = append(resultMessages, messages...)
+
+				resultStream = append(resultStream, redis.XStream{
+					Stream:   stream,
+					Messages: messages,
+				})
 			}
 		}
-
-		resultStream = append(resultStream, redis.XStream{
-			Stream:   stream,
-			Messages: resultMessages,
-		})
 	}
 	return resultStream, nil
 }
@@ -257,4 +242,15 @@ func (c *Consumer) configRedisClient() error {
 		c.handle = client
 	}
 	return nil
+}
+
+func (c *Consumer) getPendingSeedSize(count int64) int64 {
+	var (
+		size = count * 3
+	)
+
+	if MAX_PENDING_SEED_SIZE > size {
+		return size
+	}
+	return MAX_PENDING_SEED_SIZE
 }
