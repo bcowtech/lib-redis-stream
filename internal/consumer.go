@@ -89,16 +89,25 @@ func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStrea
 	c.wg.Add(1)
 	defer c.wg.Done()
 
+	var resultStream []redis.XStream = make([]redis.XStream, 0, len(c.streamKeys))
 	for _, stream := range c.streamKeys {
+		var resultMessages []redis.XMessage = make([]redis.XMessage, 0, count)
+
+		var lastPendingID string = "-"
 		// the block will fetching all pending messages till it is empty
-		for done := false; !done; done = true {
+		for {
+			size := int(count) - len(resultMessages)
+			if size <= 0 {
+				break
+			}
+
 			// fetch all pending messages from specified redis stream key
-			reply, err := c.handle.XPendingExt(&redis.XPendingExtArgs{
+			pendingSet, err := c.handle.XPendingExt(&redis.XPendingExtArgs{
 				Stream: stream,
 				Group:  c.Group,
-				Start:  "-",
+				Start:  lastPendingID,
 				End:    "+",
-				Count:  count,
+				Count:  count * 2,
 			}).Result()
 			if err != nil {
 				if err != redis.Nil {
@@ -106,34 +115,53 @@ func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStrea
 				}
 			}
 
-			for _, pending := range reply {
-				// filter the message ids that only the idle time over
-				// the Worker.AutoClaimMinIdleTime
-				if pending.Idle > minIdleTime {
-					messages, err := c.handle.XClaim(&redis.XClaimArgs{
-						Stream:   stream,
-						Group:    c.Group,
-						Consumer: c.Name,
-						MinIdle:  minIdleTime,
-						Messages: []string{pending.ID},
-					}).Result()
-					if err != nil {
-						if err != redis.Nil {
-							return nil, err
-						}
-					}
+			if len(pendingSet) == 0 {
+				break
+			}
 
-					return []redis.XStream{
-						{
-							Stream:   stream,
-							Messages: messages,
-						},
-					}, err
+			var (
+				selectedPending   []redis.XPendingExt = make([]redis.XPendingExt, 0, size)
+				selectedMessageID []string            = make([]string, 0, size)
+			)
+			// filter the message ids that only the idle time over
+			// the Worker.AutoClaimMinIdleTime
+			for _, pending := range pendingSet {
+				// update the last pending id
+				lastPendingID = pending.ID
+
+				if pending.Idle > minIdleTime {
+					selectedPending = append(selectedPending, pending)
+					selectedMessageID = append(selectedMessageID, pending.ID)
+
+					if len(selectedPending) == int(size) {
+						break
+					}
 				}
 			}
+
+			if len(selectedMessageID) > 0 {
+				messages, err := c.handle.XClaim(&redis.XClaimArgs{
+					Stream:   stream,
+					Group:    c.Group,
+					Consumer: c.Name,
+					MinIdle:  minIdleTime,
+					Messages: selectedMessageID,
+				}).Result()
+				if err != nil {
+					if err != redis.Nil {
+						return nil, err
+					}
+				}
+				resultMessages = append(resultMessages, messages...)
+			}
 		}
+
+		resultStream = append(resultStream, redis.XStream{
+			Stream:   stream,
+			Messages: resultMessages,
+		})
 	}
-	return nil, nil
+	return resultStream, nil
 }
 
 func (c *Consumer) Read(count int64, timeout time.Duration) ([]redis.XStream, error) {

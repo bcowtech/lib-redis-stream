@@ -13,6 +13,8 @@ const (
 	NextStreamOffset string = internal.NextStreamOffset
 	LastStreamOffset string = internal.LastStreamOffset
 
+	Nil = redis.Nil
+
 	LOGGER_PREFIX string = "[bcowtech/lib-redis-stream] "
 )
 
