@@ -240,7 +240,8 @@ func TestConsumer_Claim(t *testing.T) {
 		DEL gotestStream2
 	*/
 
-	err := setupTestConsumer_Claim()
+	var err error
+	err = setupTestConsumer_Claim()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,10 +263,13 @@ func TestConsumer_Claim(t *testing.T) {
 		RedisOption: &opt,
 	}
 
-	c.Subscribe(
+	err = c.Subscribe(
 		StreamKeyOffset{Key: "gotestStream1", Offset: NextStreamOffset},
 		StreamKeyOffset{Key: "gotestStream2", Offset: NextStreamOffset},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer c.Close()
 
 	var msgCnt int = 0
@@ -383,6 +387,7 @@ func setupTestConsumer_Claim() error {
 			Consumer: "gotest-main",
 			Count:    8,
 			Streams:  []string{"gotestStream1", "gotestStream2", ">", ">"},
+			Block:    100 * time.Millisecond,
 		}).Result()
 		if err != nil {
 			if err != redis.Nil {
