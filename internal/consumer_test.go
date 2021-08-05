@@ -50,10 +50,13 @@ func TestConsumer_Read(t *testing.T) {
 		RedisOption: &opt,
 	}
 
-	c.Subscribe(
+	err = c.Subscribe(
 		StreamOffset{Stream: "gotestStream1", Offset: NextStreamOffset},
 		StreamOffset{Stream: "gotestStream2", Offset: NextStreamOffset},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
 

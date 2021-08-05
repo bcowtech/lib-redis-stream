@@ -47,6 +47,10 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 		}
 		c.mutex.Unlock()
 	}()
+
+	if len(streams) == 0 {
+		return nil
+	}
 	c.init()
 	c.running = true
 
@@ -146,8 +150,10 @@ func (c *Consumer) Close() {
 		c.mutex.Unlock()
 	}()
 
-	c.stopChan <- true
-	close(c.stopChan)
+	if c.stopChan != nil {
+		c.stopChan <- true
+		close(c.stopChan)
+	}
 
 	c.wg.Wait()
 }

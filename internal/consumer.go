@@ -29,6 +29,9 @@ func (c *Consumer) Handle() *redis.Client {
 }
 
 func (c *Consumer) Subscribe(streams ...StreamOffset) error {
+	if len(streams) == 0 {
+		return fmt.Errorf("specified streams is empty")
+	}
 	if c.disposed {
 		return fmt.Errorf("the Consumer has been disposed")
 	}
