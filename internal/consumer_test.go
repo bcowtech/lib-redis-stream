@@ -51,8 +51,8 @@ func TestConsumer_Read(t *testing.T) {
 	}
 
 	c.Subscribe(
-		StreamKeyOffset{Key: "gotestStream1", Offset: NextStreamOffset},
-		StreamKeyOffset{Key: "gotestStream2", Offset: NextStreamOffset},
+		StreamOffset{Stream: "gotestStream1", Offset: NextStreamOffset},
+		StreamOffset{Stream: "gotestStream2", Offset: NextStreamOffset},
 	)
 
 	ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
@@ -264,8 +264,8 @@ func TestConsumer_Claim(t *testing.T) {
 	}
 
 	err = c.Subscribe(
-		StreamKeyOffset{Key: "gotestStream1", Offset: NextStreamOffset},
-		StreamKeyOffset{Key: "gotestStream2", Offset: NextStreamOffset},
+		StreamOffset{Stream: "gotestStream1", Offset: NextStreamOffset},
+		StreamOffset{Stream: "gotestStream2", Offset: NextStreamOffset},
 	)
 	if err != nil {
 		t.Fatal(err)

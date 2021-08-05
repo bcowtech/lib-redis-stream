@@ -33,7 +33,7 @@ func (c *AdminClient) CreateConsumerGroup(stream, group, offset string) (string,
 	return c.handle.XGroupCreate(stream, group, offset).Result()
 }
 
-func (c *AdminClient) CreateConsumerGroupWithStream(stream, group, offset string) (string, error) {
+func (c *AdminClient) CreateConsumerGroupAndStream(stream, group, offset string) (string, error) {
 	return c.handle.XGroupCreateMkStream(stream, group, offset).Result()
 }
 

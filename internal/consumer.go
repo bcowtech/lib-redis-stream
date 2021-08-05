@@ -28,7 +28,7 @@ func (c *Consumer) Handle() *redis.Client {
 	return c.handle
 }
 
-func (c *Consumer) Subscribe(streams ...StreamKeyOffset) error {
+func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	if c.disposed {
 		return fmt.Errorf("the Consumer has been disposed")
 	}
@@ -61,7 +61,7 @@ func (c *Consumer) Subscribe(streams ...StreamKeyOffset) error {
 	if size > 0 {
 		for i := 0; i < size; i++ {
 			s := streams[i]
-			keys = append(keys, s.Key)
+			keys = append(keys, s.Stream)
 		}
 		keyOffsets = append(keyOffsets, keys...)
 		for i := 0; i < size; i++ {

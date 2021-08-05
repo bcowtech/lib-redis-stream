@@ -30,7 +30,7 @@ type Consumer struct {
 	disposed    bool
 }
 
-func (c *Consumer) Subscribe(streams ...StreamKeyOffset) error {
+func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	if c.disposed {
 		return fmt.Errorf("the Consumer has been disposed")
 	}

@@ -53,8 +53,8 @@ func TestConsumer(t *testing.T) {
 	}
 
 	err = c.Subscribe(
-		redis.StreamKeyOffset{Key: "gotestStream1", Offset: redis.NextStreamOffset},
-		redis.StreamKeyOffset{Key: "gotestStream2", Offset: redis.NextStreamOffset},
+		redis.StreamOffset{Stream: "gotestStream1", Offset: redis.NextStreamOffset},
+		redis.StreamOffset{Stream: "gotestStream2", Offset: redis.NextStreamOffset},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -109,11 +109,11 @@ func setupTestConsumer() error {
 			XADD gotestStream2 * name roger age ??
 			XADD gotestStream2 * name ace age 22
 		*/
-		_, err = admin.CreateConsumerGroupWithStream("gotestStream1", "gotestGroup", redis.LastStreamOffset)
+		_, err = admin.CreateConsumerGroupAndStream("gotestStream1", "gotestGroup", redis.LastStreamOffset)
 		if err != nil {
 			return err
 		}
-		_, err = admin.CreateConsumerGroupWithStream("gotestStream2", "gotestGroup", redis.LastStreamOffset)
+		_, err = admin.CreateConsumerGroupAndStream("gotestStream2", "gotestGroup", redis.LastStreamOffset)
 		if err != nil {
 			return err
 		}

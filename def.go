@@ -28,7 +28,7 @@ type (
 	XMessage = redis.XMessage
 	XStream  = redis.XStream
 
-	StreamKeyOffset = internal.StreamKeyOffset
+	StreamOffset = internal.StreamOffset
 )
 
 // func
