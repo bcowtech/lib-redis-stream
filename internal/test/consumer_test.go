@@ -36,6 +36,9 @@ func TestConsumer(t *testing.T) {
 		MaxInFlight:          1,
 		MaxPollingTimeout:    10 * time.Millisecond,
 		AutoClaimMinIdleTime: 30 * time.Millisecond,
+		BlockIfNoMessages:    2000 * time.Millisecond,
+		ClaimSensitivity:     2,
+		ClaimOccurrenceRate:  2,
 		MessageHandler: func(ctx *redis.ConsumeContext, stream string, message *redis.XMessage) {
 			t.Logf("Message on %s: %v\n", stream, message)
 			ctx.Ack(stream, message.ID)

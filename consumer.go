@@ -16,6 +16,9 @@ type Consumer struct {
 	MaxInFlight             int64
 	MaxPollingTimeout       time.Duration
 	AutoClaimMinIdleTime    time.Duration
+	BlockIfNoMessages       time.Duration // 若沒有任何訊息時等待多久
+	ClaimSensitivity        int           // Read 時取得的訊息數小於等於 n 的話, 執行 Claim
+	ClaimOccurrenceRate     int32         // Read 每執行 n 次後 執行 Claim 1 次
 	MessageHandler          MessageHandleProc
 	UnhandledMessageHandler MessageHandleProc
 	ErrorHandler            RedisErrorHandleProc
@@ -23,6 +26,8 @@ type Consumer struct {
 	handle   *internal.Consumer
 	stopChan chan bool
 	wg       sync.WaitGroup
+
+	claimCountWheel *internal.CountWheel
 
 	mutex       sync.Mutex
 	initialized bool
@@ -70,6 +75,9 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 		c.handle = consumer
 	}
 
+	// reset
+	c.claimCountWheel.Reset()
+
 	var (
 		ctx = &ConsumeContext{
 			consumer:                c,
@@ -89,46 +97,11 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 				return
 
 			default:
-				// perform XREADGROUP
-				{
-					streams, err := c.handle.Read(c.MaxInFlight, c.MaxPollingTimeout)
-					if err != nil {
-						if err != redis.Nil {
-							if !c.processRedisError(err) {
-								logger.Fatalf("%% Error: %v\n", err)
-								return
-							}
-						}
-						continue
-					}
-					if len(streams) > 0 {
-						for _, stream := range streams {
-							for _, message := range stream.Messages {
-								c.MessageHandler(ctx, stream.Stream, &message)
-							}
-						}
-						continue
-					}
-				}
-				// perform XAUTOCLAIM
-				{
-					streams, err := c.handle.Claim(c.MaxInFlight, c.AutoClaimMinIdleTime)
-					if err != nil {
-						if err != redis.Nil {
-							if !c.processRedisError(err) {
-								logger.Fatalf("%% Error: %v\n", err)
-								return
-							}
-						}
-						continue
-					}
-					if len(streams) > 0 {
-						for _, stream := range streams {
-							for _, message := range stream.Messages {
-								c.MessageHandler(ctx, stream.Stream, &message)
-							}
-						}
-						continue
+				err := c.poll(ctx)
+				if err != nil {
+					if !c.processRedisError(err) {
+						logger.Fatalf("%% Error: %v\n", err)
+						return
 					}
 				}
 			}
@@ -166,6 +139,10 @@ func (c *Consumer) init() {
 	if c.stopChan == nil {
 		c.stopChan = make(chan bool, 1)
 	}
+
+	if c.claimCountWheel == nil {
+		c.claimCountWheel = internal.NewCountWheel(c.ClaimOccurrenceRate)
+	}
 	c.initialized = true
 }
 
@@ -178,4 +155,53 @@ func (c *Consumer) processRedisError(err error) (disposed bool) {
 
 func (c *Consumer) getRedisClient() *redis.Client {
 	return c.handle.Handle()
+}
+
+func (c *Consumer) poll(ctx *ConsumeContext) error {
+	var (
+		numMessage int = 0
+	)
+
+	// perform XREADGROUP
+	{
+		streams, err := c.handle.Read(c.MaxInFlight, c.MaxPollingTimeout)
+		if err != nil {
+			if err != redis.Nil {
+				return err
+			}
+		}
+
+		if len(streams) > 0 {
+			for _, stream := range streams {
+				for _, message := range stream.Messages {
+					c.MessageHandler(ctx, stream.Stream, &message)
+					numMessage++
+				}
+			}
+		}
+	}
+
+	// perform XAUTOCLAIM
+	if c.claimCountWheel.Spin() || numMessage <= c.ClaimSensitivity {
+		// fmt.Println("***CLAIM")
+		streams, err := c.handle.Claim(c.MaxInFlight, c.AutoClaimMinIdleTime)
+		if err != nil {
+			if err != redis.Nil {
+				return err
+			}
+		}
+		if len(streams) > 0 {
+			for _, stream := range streams {
+				for _, message := range stream.Messages {
+					c.MessageHandler(ctx, stream.Stream, &message)
+				}
+			}
+			return nil
+		}
+
+		if numMessage == 0 {
+			time.Sleep(c.BlockIfNoMessages)
+		}
+	}
+	return nil
 }
