@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -16,7 +15,7 @@ type Consumer struct {
 	MaxInFlight             int64
 	MaxPollingTimeout       time.Duration
 	AutoClaimMinIdleTime    time.Duration
-	BlockIfNoMessages       time.Duration // 若沒有任何訊息時等待多久
+	IdlingTimeout           time.Duration // 若沒有任何訊息時等待多久
 	ClaimSensitivity        int           // Read 時取得的訊息數小於等於 n 的話, 執行 Claim
 	ClaimOccurrenceRate     int32         // Read 每執行 n 次後 執行 Claim 1 次
 	MessageHandler          MessageHandleProc
@@ -37,10 +36,10 @@ type Consumer struct {
 
 func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	if c.disposed {
-		return fmt.Errorf("the Consumer has been disposed")
+		logger.Panic("the Consumer has been disposed")
 	}
 	if c.running {
-		return fmt.Errorf("the Consumer is running")
+		logger.Panic("the Consumer is running")
 	}
 
 	var err error
@@ -200,7 +199,7 @@ func (c *Consumer) poll(ctx *ConsumeContext) error {
 		}
 
 		if numMessage == 0 {
-			time.Sleep(c.BlockIfNoMessages)
+			time.Sleep(c.IdlingTimeout)
 		}
 	}
 	return nil
