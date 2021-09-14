@@ -5,9 +5,10 @@ import (
 )
 
 const (
-	AutoIncrement    string = "*"
-	NextStreamOffset string = ">"
-	LastStreamOffset string = "$"
+	AutoIncrement        string = "*"
+	NextStreamOffset     string = ">"
+	LastStreamOffset     string = "$"
+	StartingStreamOffset string = "0"
 
 	MAX_PENDING_SEED_SIZE int64 = 64
 )
