@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	AutoIncrement    string = internal.AutoIncrement
-	NextStreamOffset string = internal.NextStreamOffset
-	LastStreamOffset string = internal.LastStreamOffset
+	AutoIncrement        string = internal.AutoIncrement
+	NextStreamOffset     string = internal.NextStreamOffset
+	LastStreamOffset     string = internal.LastStreamOffset
+	StartingStreamOffset string = internal.StartingStreamOffset
 
 	Nil = redis.Nil
 
