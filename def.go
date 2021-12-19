@@ -9,14 +9,19 @@ import (
 )
 
 const (
-	AutoIncrement        string = internal.AutoIncrement
-	NextStreamOffset     string = internal.NextStreamOffset
-	LastStreamOffset     string = internal.LastStreamOffset
-	StartingStreamOffset string = internal.StartingStreamOffset
+	StreamAsteriskID           string = internal.StreamAsteriskID
+	StreamLastDeliveredID      string = internal.StreamLastDeliveredID
+	StreamZeroID               string = internal.StreamZeroID
+	StreamZeroOffset           string = internal.StreamZeroOffset
+	StreamNeverDeliveredOffset string = internal.StreamNeverDeliveredOffset
 
 	Nil = redis.Nil
 
 	LOGGER_PREFIX string = "[bcowtech/lib-redis-stream] "
+
+	MAX_PENDING_FETCHING_SIZE         int64 = 512
+	MIN_PENDING_FETCHING_SIZE         int64 = 16
+	PENDING_FETCHING_SIZE_COEFFICIENT int64 = 3
 )
 
 var (

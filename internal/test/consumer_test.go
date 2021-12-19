@@ -30,15 +30,15 @@ func TestConsumer(t *testing.T) {
 	var msgCnt int = 0
 
 	c := &redis.Consumer{
-		Group:                "gotestGroup",
-		Name:                 "gotestConsumer",
-		RedisOption:          &opt,
-		MaxInFlight:          1,
-		MaxPollingTimeout:    10 * time.Millisecond,
-		AutoClaimMinIdleTime: 30 * time.Millisecond,
-		IdlingTimeout:        2000 * time.Millisecond,
-		ClaimSensitivity:     2,
-		ClaimOccurrenceRate:  2,
+		Group:               "gotestGroup",
+		Name:                "gotestConsumer",
+		RedisOption:         &opt,
+		MaxInFlight:         1,
+		MaxPollingTimeout:   10 * time.Millisecond,
+		ClaimMinIdleTime:    30 * time.Millisecond,
+		IdlingTimeout:       2000 * time.Millisecond,
+		ClaimSensitivity:    2,
+		ClaimOccurrenceRate: 2,
 		MessageHandler: func(ctx *redis.ConsumeContext, stream string, message *redis.XMessage) {
 			t.Logf("Message on %s: %v\n", stream, message)
 			ctx.Ack(stream, message.ID)
@@ -56,8 +56,8 @@ func TestConsumer(t *testing.T) {
 	}
 
 	err = c.Subscribe(
-		redis.StreamOffset{Stream: "gotestStream1", Offset: redis.NextStreamOffset},
-		redis.StreamOffset{Stream: "gotestStream2", Offset: redis.NextStreamOffset},
+		redis.FromStreamNeverDeliveredOffset("gotestStream1"),
+		redis.FromStreamNeverDeliveredOffset("gotestStream2"),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -112,11 +112,11 @@ func setupTestConsumer() error {
 			XADD gotestStream2 * name roger age ??
 			XADD gotestStream2 * name ace age 22
 		*/
-		_, err = admin.CreateConsumerGroupAndStream("gotestStream1", "gotestGroup", redis.LastStreamOffset)
+		_, err = admin.CreateConsumerGroupAndStream("gotestStream1", "gotestGroup", redis.StreamLastDeliveredID)
 		if err != nil {
 			return err
 		}
-		_, err = admin.CreateConsumerGroupAndStream("gotestStream2", "gotestGroup", redis.LastStreamOffset)
+		_, err = admin.CreateConsumerGroupAndStream("gotestStream2", "gotestGroup", redis.StreamLastDeliveredID)
 		if err != nil {
 			return err
 		}
@@ -127,28 +127,28 @@ func setupTestConsumer() error {
 		}
 		defer p.Close()
 
-		_, err = p.Write("gotestStream1", redis.AutoIncrement, map[string]interface{}{
+		_, err = p.Write("gotestStream1", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "luffy",
 			"age":  19,
 		})
 		if err != nil {
 			return err
 		}
-		_, err = p.Write("gotestStream1", redis.AutoIncrement, map[string]interface{}{
+		_, err = p.Write("gotestStream1", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "nami",
 			"age":  21,
 		})
 		if err != nil {
 			return err
 		}
-		_, err = p.Write("gotestStream2", redis.AutoIncrement, map[string]interface{}{
+		_, err = p.Write("gotestStream2", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "roger",
 			"age":  "??",
 		})
 		if err != nil {
 			return err
 		}
-		_, err = p.Write("gotestStream2", redis.AutoIncrement, map[string]interface{}{
+		_, err = p.Write("gotestStream2", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "ace",
 			"age":  "22",
 		})

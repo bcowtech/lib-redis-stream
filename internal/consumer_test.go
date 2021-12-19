@@ -51,8 +51,8 @@ func TestConsumer_Read(t *testing.T) {
 	}
 
 	err = c.Subscribe(
-		StreamOffset{Stream: "gotestStream1", Offset: NextStreamOffset},
-		StreamOffset{Stream: "gotestStream2", Offset: NextStreamOffset},
+		StreamOffset{Stream: "gotestStream1", Offset: StreamNeverDeliveredOffset},
+		StreamOffset{Stream: "gotestStream2", Offset: StreamNeverDeliveredOffset},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -139,11 +139,11 @@ func setupTestConsumer_Read() error {
 			XADD gotestStream2 * name roger age ??
 			XADD gotestStream2 * name ace age 22
 		*/
-		_, err = client.XGroupCreateMkStream("gotestStream1", "gotestGroup", LastStreamOffset).Result()
+		_, err = client.XGroupCreateMkStream("gotestStream1", "gotestGroup", StreamLastDeliveredID).Result()
 		if err != nil {
 			return err
 		}
-		_, err = client.XGroupCreateMkStream("gotestStream2", "gotestGroup", LastStreamOffset).Result()
+		_, err = client.XGroupCreateMkStream("gotestStream2", "gotestGroup", StreamLastDeliveredID).Result()
 		if err != nil {
 			return err
 		}
@@ -267,8 +267,8 @@ func TestConsumer_Claim(t *testing.T) {
 	}
 
 	err = c.Subscribe(
-		StreamOffset{Stream: "gotestStream1", Offset: NextStreamOffset},
-		StreamOffset{Stream: "gotestStream2", Offset: NextStreamOffset},
+		StreamOffset{Stream: "gotestStream1", Offset: StreamNeverDeliveredOffset},
+		StreamOffset{Stream: "gotestStream2", Offset: StreamNeverDeliveredOffset},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -278,7 +278,7 @@ func TestConsumer_Claim(t *testing.T) {
 	var msgCnt int = 0
 	time.Sleep(4 * time.Second)
 
-	res, err := c.Claim(1, 4*time.Second)
+	res, err := c.Claim(4*time.Second, 1, 10)
 	// t.Logf("%+v", res)
 	if err != nil {
 		if err != redis.Nil {
@@ -344,11 +344,11 @@ func setupTestConsumer_Claim() error {
 			XADD gotestStream2 * name roger age ??
 			XADD gotestStream2 * name ace age 22
 		*/
-		_, err = client.XGroupCreateMkStream("gotestStream1", "gotestGroup", LastStreamOffset).Result()
+		_, err = client.XGroupCreateMkStream("gotestStream1", "gotestGroup", StreamLastDeliveredID).Result()
 		if err != nil {
 			return err
 		}
-		_, err = client.XGroupCreateMkStream("gotestStream2", "gotestGroup", LastStreamOffset).Result()
+		_, err = client.XGroupCreateMkStream("gotestStream2", "gotestGroup", StreamLastDeliveredID).Result()
 		if err != nil {
 			return err
 		}

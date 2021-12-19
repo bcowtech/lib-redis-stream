@@ -14,9 +14,9 @@ type Consumer struct {
 	RedisOption             *redis.Options
 	MaxInFlight             int64
 	MaxPollingTimeout       time.Duration
-	AutoClaimMinIdleTime    time.Duration
+	ClaimMinIdleTime        time.Duration
 	IdlingTimeout           time.Duration // 若沒有任何訊息時等待多久
-	ClaimSensitivity        int           // Read 時取得的訊息數小於等於 n 的話, 執行 Claim
+	ClaimSensitivity        int           // Read 時取得的訊息數小於 n 的話, 執行 Claim
 	ClaimOccurrenceRate     int32         // Read 每執行 n 次後 執行 Claim 1 次
 	MessageHandler          MessageHandleProc
 	UnhandledMessageHandler MessageHandleProc
@@ -26,7 +26,7 @@ type Consumer struct {
 	stopChan chan bool
 	wg       sync.WaitGroup
 
-	claimCountWheel *internal.CountWheel
+	claimTrigger *internal.CyclicCounter
 
 	mutex       sync.Mutex
 	initialized bool
@@ -75,7 +75,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	}
 
 	// reset
-	c.claimCountWheel.Reset()
+	c.claimTrigger.Reset()
 
 	var (
 		ctx = &ConsumeContext{
@@ -96,7 +96,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 				return
 
 			default:
-				err := c.poll(ctx)
+				err := c.processMessage(ctx)
 				if err != nil {
 					if !c.processRedisError(err) {
 						logger.Fatalf("%% Error: %v\n", err)
@@ -139,8 +139,8 @@ func (c *Consumer) init() {
 		c.stopChan = make(chan bool, 1)
 	}
 
-	if c.claimCountWheel == nil {
-		c.claimCountWheel = internal.NewCountWheel(c.ClaimOccurrenceRate)
+	if c.claimTrigger == nil {
+		c.claimTrigger = internal.NewCyclicCounter(c.ClaimOccurrenceRate)
 	}
 	c.initialized = true
 }
@@ -156,9 +156,9 @@ func (c *Consumer) getRedisClient() *redis.Client {
 	return c.handle.Handle()
 }
 
-func (c *Consumer) poll(ctx *ConsumeContext) error {
+func (c *Consumer) processMessage(ctx *ConsumeContext) error {
 	var (
-		numMessage int = 0
+		readMessages int = 0
 	)
 
 	// perform XREADGROUP
@@ -174,16 +174,20 @@ func (c *Consumer) poll(ctx *ConsumeContext) error {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
 					c.MessageHandler(ctx, stream.Stream, &message)
-					numMessage++
+					readMessages++
 				}
 			}
 		}
 	}
 
 	// perform XAUTOCLAIM
-	if c.claimCountWheel.Spin() || numMessage <= c.ClaimSensitivity {
+	if c.claimTrigger.Spin() || readMessages < c.ClaimSensitivity {
 		// fmt.Println("***CLAIM")
-		streams, err := c.handle.Claim(c.MaxInFlight, c.AutoClaimMinIdleTime)
+		var (
+			pendingFetchingSize = c.computePendingFetchingSize(c.MaxInFlight)
+		)
+
+		streams, err := c.handle.Claim(c.ClaimMinIdleTime, c.MaxInFlight, pendingFetchingSize)
 		if err != nil {
 			if err != redis.Nil {
 				return err
@@ -198,9 +202,23 @@ func (c *Consumer) poll(ctx *ConsumeContext) error {
 			return nil
 		}
 
-		if numMessage == 0 {
+		if readMessages == 0 {
 			time.Sleep(c.IdlingTimeout)
 		}
 	}
 	return nil
+}
+
+func (c *Consumer) computePendingFetchingSize(maxInFlight int64) int64 {
+	var (
+		fetchingSize = maxInFlight * PENDING_FETCHING_SIZE_COEFFICIENT
+	)
+
+	if fetchingSize < MIN_PENDING_FETCHING_SIZE {
+		return MIN_PENDING_FETCHING_SIZE
+	}
+	if fetchingSize > MAX_PENDING_FETCHING_SIZE {
+		return MAX_PENDING_FETCHING_SIZE
+	}
+	return fetchingSize
 }

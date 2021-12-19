@@ -5,12 +5,14 @@ import (
 )
 
 const (
-	AutoIncrement        string = "*"
-	NextStreamOffset     string = ">"
-	LastStreamOffset     string = "$"
-	StartingStreamOffset string = "0"
+	StreamAsteriskID           string = "*"
+	StreamLastDeliveredID      string = "$"
+	StreamZeroID               string = "0"
+	StreamZeroOffset           string = "0"
+	StreamNeverDeliveredOffset string = ">"
 
-	MAX_PENDING_SEED_SIZE int64 = 64
+	MAX_PENDING_FETCHING_SIZE int64 = 512
+	MIN_PENDING_FETCHING_SIZE int64 = 16
 )
 
 type (

@@ -70,7 +70,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 		for i := 0; i < size; i++ {
 			s := streams[i]
 			if len(s.Offset) == 0 {
-				keyOffsets = append(keyOffsets, NextStreamOffset)
+				keyOffsets = append(keyOffsets, StreamNeverDeliveredOffset)
 			} else {
 				keyOffsets = append(keyOffsets, s.Offset)
 			}
@@ -81,7 +81,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	return nil
 }
 
-func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStream, error) {
+func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetchingSize int64) ([]redis.XStream, error) {
 	if c.disposed {
 		return nil, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -100,7 +100,7 @@ func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStrea
 			Group:  c.Group,
 			Start:  "-",
 			End:    "+",
-			Count:  c.getPendingSeedSize(count),
+			Count:  pendingFetchingSize,
 		}).Result()
 		if err != nil {
 			if err != redis.Nil {
@@ -110,31 +110,31 @@ func (c *Consumer) Claim(count int64, minIdleTime time.Duration) ([]redis.XStrea
 
 		if len(pendingSet) > 0 {
 			var (
-				selectedPending   []redis.XPendingExt = make([]redis.XPendingExt, 0, count)
-				selectedMessageID []string            = make([]string, 0, count)
+				unhandledMessages   []redis.XPendingExt = make([]redis.XPendingExt, 0, count)
+				unhandledMessageIDs []string            = make([]string, 0, count)
 			)
 
 			// filter the message ids that only the idle time over
 			// the Worker.AutoClaimMinIdleTime
 			for _, pending := range pendingSet {
 				// update the last pending id
-				if pending.Idle > minIdleTime {
-					selectedPending = append(selectedPending, pending)
-					selectedMessageID = append(selectedMessageID, pending.ID)
+				if pending.Idle >= minIdleTime {
+					unhandledMessages = append(unhandledMessages, pending)
+					unhandledMessageIDs = append(unhandledMessageIDs, pending.ID)
 
-					if len(selectedPending) == int(count) {
+					if len(unhandledMessages) == int(count) {
 						break
 					}
 				}
 			}
 
-			if len(selectedMessageID) > 0 {
+			if len(unhandledMessageIDs) > 0 {
 				messages, err := c.handle.XClaim(&redis.XClaimArgs{
 					Stream:   stream,
 					Group:    c.Group,
 					Consumer: c.Name,
 					MinIdle:  minIdleTime,
-					Messages: selectedMessageID,
+					Messages: unhandledMessageIDs,
 				}).Result()
 				if err != nil {
 					if err != redis.Nil {
@@ -245,15 +245,4 @@ func (c *Consumer) configRedisClient() error {
 		c.handle = client
 	}
 	return nil
-}
-
-func (c *Consumer) getPendingSeedSize(count int64) int64 {
-	var (
-		size = count * 3
-	)
-
-	if MAX_PENDING_SEED_SIZE > size {
-		return size
-	}
-	return MAX_PENDING_SEED_SIZE
 }

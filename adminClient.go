@@ -41,7 +41,7 @@ func (c *AdminClient) DeleteConsumerGroup(stream, group string) (int64, error) {
 	return c.handle.XGroupDestroy(stream, group).Result()
 }
 
-func (c *AdminClient) AlterConsumerGroupOffset(stream, group, offset string) (string, error) {
+func (c *AdminClient) SetConsumerGroupOffset(stream, group, offset string) (string, error) {
 	return c.handle.XGroupSetID(stream, group, offset).Result()
 }
 

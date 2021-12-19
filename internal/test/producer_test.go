@@ -30,7 +30,7 @@ func TestProducer(t *testing.T) {
 
 	// produce message
 	{
-		reply, err := p.Write("gotestStream1", redis.AutoIncrement, map[string]interface{}{
+		reply, err := p.Write("gotestStream1", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "luffy",
 			"age":  19,
 		})
@@ -41,7 +41,7 @@ func TestProducer(t *testing.T) {
 	}
 
 	{
-		reply, err := p.Write("gotestStream1", redis.AutoIncrement, map[string]interface{}{
+		reply, err := p.Write("gotestStream1", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "nami",
 			"age":  21,
 		})
@@ -52,7 +52,7 @@ func TestProducer(t *testing.T) {
 	}
 
 	{
-		reply, err := p.Write("gotestStream1", redis.AutoIncrement, map[string]interface{}{
+		reply, err := p.Write("gotestStream1", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "zoro",
 			"age":  21,
 		})
@@ -63,7 +63,7 @@ func TestProducer(t *testing.T) {
 	}
 
 	{
-		reply, err := p.Write("gotestStream2", redis.AutoIncrement, map[string]interface{}{
+		reply, err := p.Write("gotestStream2", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "roger",
 			"age":  "??",
 		})
@@ -74,7 +74,7 @@ func TestProducer(t *testing.T) {
 	}
 
 	{
-		reply, err := p.Write("gotestStream2", redis.AutoIncrement, map[string]interface{}{
+		reply, err := p.Write("gotestStream2", redis.StreamAsteriskID, map[string]interface{}{
 			"name": "ace",
 			"age":  "22",
 		})
