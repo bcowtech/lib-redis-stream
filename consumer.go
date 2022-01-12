@@ -11,7 +11,7 @@ import (
 type Consumer struct {
 	Group                   string
 	Name                    string
-	RedisOption             *redis.Options
+	RedisOption             *redis.UniversalOptions
 	MaxInFlight             int64
 	MaxPollingTimeout       time.Duration
 	ClaimMinIdleTime        time.Duration
@@ -152,7 +152,7 @@ func (c *Consumer) processRedisError(err error) (disposed bool) {
 	return false
 }
 
-func (c *Consumer) getRedisClient() *redis.Client {
+func (c *Consumer) getRedisClient() redis.UniversalClient {
 	return c.handle.Handle()
 }
 

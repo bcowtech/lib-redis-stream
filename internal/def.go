@@ -16,8 +16,8 @@ const (
 )
 
 type (
-	Options  = redis.Options
-	Client   = redis.Client
-	XMessage = redis.XMessage
-	XStream  = redis.XStream
+	UniversalOptions = redis.UniversalOptions
+	UniversalClient  = redis.UniversalClient
+	XMessage         = redis.XMessage
+	XStream          = redis.XStream
 )

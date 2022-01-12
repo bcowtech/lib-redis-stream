@@ -9,14 +9,14 @@ import (
 )
 
 type Producer struct {
-	handle *redis.Client
+	handle redis.UniversalClient
 
 	wg       sync.WaitGroup
 	mutex    sync.Mutex
 	disposed bool
 }
 
-func NewProducer(opt *Options) (*Producer, error) {
+func NewProducer(opt *UniversalOptions) (*Producer, error) {
 	instance := &Producer{}
 
 	var err error
@@ -27,7 +27,7 @@ func NewProducer(opt *Options) (*Producer, error) {
 	return instance, nil
 }
 
-func (p *Producer) Handle() *redis.Client {
+func (p *Producer) Handle() redis.UniversalClient {
 	return p.handle
 }
 
@@ -66,8 +66,8 @@ func (p *Producer) Close() {
 	p.handle.Close()
 }
 
-func (p *Producer) init(opt *redis.Options) error {
-	client, err := internal.CreateRedisClient(opt)
+func (p *Producer) init(opt *UniversalOptions) error {
+	client, err := internal.CreateRedisUniversalClient(opt)
 	if err != nil {
 		return err
 	}

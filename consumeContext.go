@@ -13,7 +13,7 @@ type ConsumeContext struct {
 }
 
 // get redis client
-func (c *ConsumeContext) Handle() *Client {
+func (c *ConsumeContext) Handle() UniversalClient {
 	return c.consumer.getRedisClient()
 }
 

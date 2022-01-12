@@ -39,9 +39,9 @@ func TestConsumer_Read(t *testing.T) {
 		}
 	}()
 
-	opt := redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	opt := redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	}
 
 	c := &Consumer{
@@ -255,9 +255,9 @@ func TestConsumer_Claim(t *testing.T) {
 		}
 	}()
 
-	opt := redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	opt := redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	}
 
 	c := &Consumer{

@@ -11,9 +11,9 @@ import (
 type Consumer struct {
 	Group       string
 	Name        string
-	RedisOption *redis.Options
+	RedisOption *redis.UniversalOptions
 
-	handle *redis.Client
+	handle UniversalClient
 	wg     sync.WaitGroup
 
 	streamKeys       []string
@@ -24,7 +24,7 @@ type Consumer struct {
 	disposed bool
 }
 
-func (c *Consumer) Handle() *redis.Client {
+func (c *Consumer) Handle() UniversalClient {
 	return c.handle
 }
 
@@ -237,7 +237,7 @@ func (c *Consumer) Close() {
 
 func (c *Consumer) configRedisClient() error {
 	if c.handle == nil {
-		client, err := CreateRedisClient(c.RedisOption)
+		client, err := CreateRedisUniversalClient(c.RedisOption)
 		if err != nil {
 			return err
 		}

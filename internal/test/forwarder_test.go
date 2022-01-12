@@ -8,9 +8,9 @@ import (
 )
 
 func TestForwarder(t *testing.T) {
-	f, err := redis.NewForwarder(&redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	f, err := redis.NewForwarder(&redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	})
 	if err != nil {
 		t.Fatal(err)

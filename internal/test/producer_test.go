@@ -8,9 +8,9 @@ import (
 )
 
 func TestProducer(t *testing.T) {
-	p, err := redis.NewProducer(&redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	p, err := redis.NewProducer(&redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	})
 	if err != nil {
 		t.Fatal(err)

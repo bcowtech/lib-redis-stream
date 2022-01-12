@@ -6,11 +6,11 @@ import (
 )
 
 type AdminClient struct {
-	handle *redis.Client
+	handle redis.UniversalClient
 }
 
-func NewAdminClient(opt *Options) (*AdminClient, error) {
-	client, err := internal.CreateRedisClient(opt)
+func NewAdminClient(opt *UniversalOptions) (*AdminClient, error) {
+	client, err := internal.CreateRedisUniversalClient(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func NewAdminClient(opt *Options) (*AdminClient, error) {
 	return instance, nil
 }
 
-func (c *AdminClient) Handle() *redis.Client {
+func (c *AdminClient) Handle() redis.UniversalClient {
 	return c.handle
 }
 

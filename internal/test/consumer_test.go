@@ -22,9 +22,9 @@ func TestConsumer(t *testing.T) {
 		}
 	}()
 
-	opt := redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	opt := redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	}
 
 	var msgCnt int = 0
@@ -82,9 +82,9 @@ func TestConsumer(t *testing.T) {
 }
 
 func setupTestConsumer() error {
-	opt := &redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	opt := &redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	}
 
 	admin, err := redis.NewAdminClient(opt)
@@ -160,9 +160,9 @@ func setupTestConsumer() error {
 }
 
 func teardownTestConsumer() error {
-	admin, err := redis.NewAdminClient(&redis.Options{
-		Addr: os.Getenv("REDIS_SERVER"),
-		DB:   0,
+	admin, err := redis.NewAdminClient(&redis.UniversalOptions{
+		Addrs: []string{os.Getenv("REDIS_SERVER")},
+		DB:    0,
 	})
 	if err != nil {
 		return err
