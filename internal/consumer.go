@@ -110,8 +110,7 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 
 		if len(pendingSet) > 0 {
 			var (
-				pendingMessages   []redis.XPendingExt = make([]redis.XPendingExt, 0, count)
-				pendingMessageIDs []string            = make([]string, 0, count)
+				pendingMessageIDs []string = make([]string, 0, count)
 			)
 
 			// filter the message ids that only the idle time over
@@ -119,10 +118,9 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 			for _, pending := range pendingSet {
 				// update the last pending id
 				if pending.Idle >= minIdleTime {
-					pendingMessages = append(pendingMessages, pending)
 					pendingMessageIDs = append(pendingMessageIDs, pending.ID)
 
-					if len(pendingMessages) == int(count) {
+					if len(pendingMessageIDs) == int(count) {
 						break
 					}
 				}
@@ -156,8 +154,8 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 						}
 					} else {
 						var (
-							ghostIDs          []string
-							nextMessagesIndex int = 0
+							ghostIDs               []string
+							nextClaimMessagesIndex int = 0
 						)
 
 						// Because
@@ -165,10 +163,10 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 						//   2) the XCLAIM messages might be missing part messages but it won't change sequence,
 						// we can check XCLAIM messages according to XPENDING messages sequence with their message ID.
 						for i, id := range pendingMessageIDs {
-							if nextMessagesIndex < len(claimMessages) {
-								if id == claimMessages[nextMessagesIndex].ID {
+							if nextClaimMessagesIndex < len(claimMessages) {
+								if id == claimMessages[nextClaimMessagesIndex].ID {
 									// advence nextMessagesIndex
-									nextMessagesIndex++
+									nextClaimMessagesIndex++
 								} else {
 									ghostIDs = append(ghostIDs, id)
 								}
