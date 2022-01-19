@@ -20,3 +20,9 @@ func CreateRedisUniversalClient(opt *UniversalOptions) (UniversalClient, error) 
 	}
 	return client, nil
 }
+
+func Assert(ok bool, message string) {
+	if !ok {
+		panic(message)
+	}
+}

@@ -110,31 +110,31 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 
 		if len(pendingSet) > 0 {
 			var (
-				unhandledMessages   []redis.XPendingExt = make([]redis.XPendingExt, 0, count)
-				unhandledMessageIDs []string            = make([]string, 0, count)
+				pendingMessages   []redis.XPendingExt = make([]redis.XPendingExt, 0, count)
+				pendingMessageIDs []string            = make([]string, 0, count)
 			)
 
 			// filter the message ids that only the idle time over
-			// the Worker.AutoClaimMinIdleTime
+			// the Worker.ClaimMinIdleTime
 			for _, pending := range pendingSet {
 				// update the last pending id
 				if pending.Idle >= minIdleTime {
-					unhandledMessages = append(unhandledMessages, pending)
-					unhandledMessageIDs = append(unhandledMessageIDs, pending.ID)
+					pendingMessages = append(pendingMessages, pending)
+					pendingMessageIDs = append(pendingMessageIDs, pending.ID)
 
-					if len(unhandledMessages) == int(count) {
+					if len(pendingMessages) == int(count) {
 						break
 					}
 				}
 			}
 
-			if len(unhandledMessageIDs) > 0 {
-				messages, err := c.handle.XClaim(&redis.XClaimArgs{
+			if len(pendingMessageIDs) > 0 {
+				claimMessages, err := c.handle.XClaim(&redis.XClaimArgs{
 					Stream:   stream,
 					Group:    c.Group,
 					Consumer: c.Name,
 					MinIdle:  minIdleTime,
-					Messages: unhandledMessageIDs,
+					Messages: pendingMessageIDs,
 				}).Result()
 				if err != nil {
 					if err != redis.Nil {
@@ -142,10 +142,55 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 					}
 				}
 
-				resultStream = append(resultStream, redis.XStream{
-					Stream:   stream,
-					Messages: messages,
-				})
+				// clear invalid message IDs (ghost IDs)
+				if len(claimMessages) != len(pendingMessageIDs) {
+
+					Assert(
+						len(claimMessages) < len(pendingMessageIDs),
+						"the XCLAIM messages must less or equal than the XPENDING messages")
+
+					if len(claimMessages) == 0 {
+						// purge ghost IDs
+						if err := c.ackGhostIDs(stream, pendingMessageIDs...); err != nil {
+							return nil, err
+						}
+					} else {
+						var (
+							ghostIDs          []string
+							nextMessagesIndex int = 0
+						)
+
+						// Because
+						//   1) the XCLAIM messages must less or equal than the XPENDING messages,
+						//   2) the XCLAIM messages might be missing part messages but it won't change sequence,
+						// we can check XCLAIM messages according to XPENDING messages sequence with their message ID.
+						for i, id := range pendingMessageIDs {
+							if nextMessagesIndex < len(claimMessages) {
+								if id == claimMessages[nextMessagesIndex].ID {
+									// advence nextMessagesIndex
+									nextMessagesIndex++
+								} else {
+									ghostIDs = append(ghostIDs, id)
+								}
+							} else {
+								ghostIDs = append(ghostIDs, pendingMessageIDs[i:]...)
+								break
+							}
+						}
+
+						// purge ghost IDs
+						if err := c.ackGhostIDs(stream, ghostIDs...); err != nil {
+							return nil, err
+						}
+					}
+				}
+
+				if len(claimMessages) > 0 {
+					resultStream = append(resultStream, redis.XStream{
+						Stream:   stream,
+						Messages: claimMessages,
+					})
+				}
 			}
 		}
 	}
@@ -243,6 +288,27 @@ func (c *Consumer) configRedisClient() error {
 		}
 
 		c.handle = client
+	}
+	return nil
+}
+
+func (c *Consumer) ackGhostIDs(stream string, ghostIDs ...string) error {
+	for _, id := range ghostIDs {
+		reply, err := c.handle.XRange(stream, id, id).Result()
+		if err != nil {
+			if err != redis.Nil {
+				return err
+			}
+		}
+
+		if len(reply) == 0 {
+			err = c.handle.XAck(stream, c.Group, id).Err()
+			if err != nil {
+				if err != redis.Nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }
